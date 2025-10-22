@@ -1,0 +1,735 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Processar PDF - Sistema Administrativo-Financeiro{% endblock %}
+
+{% block page_title %}Processar PDF{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'pdf_processor:pdf_processed_list' %}" class="btn btn-success">
+        <i class="bi bi-list-check"></i> PDFs Processados
+    </a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+        <i class="bi bi-upload"></i> Upload PDF
+    </button>
+    <button type="button" class="btn btn-outline-secondary" onclick="refreshList()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+    </button>
+{% endblock %}
+
+{% block content %}
+<!-- Upload de PDF -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-pdf text-danger"></i> Upload de Nota Fiscal
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="file-upload-area" onclick="document.getElementById('pdf-upload').click()">
+                    <input type="file" id="pdf-upload" accept=".pdf" style="display: none;">
+                    <div class="file-display">
+                        <i class="bi bi-cloud-upload display-4 text-muted"></i>
+                        <div class="mt-3">
+                            <h5>Arraste um arquivo PDF aqui</h5>
+                            <p class="text-muted">ou clique para selecionar</p>
+                            <small class="text-muted">Máximo 16MB</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary" id="process-pdf-btn" disabled>
+                        <i class="bi bi-gear"></i> Processar PDF
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="clear-file-btn" disabled>
+                        <i class="bi bi-x"></i> Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search-input" class="form-label">Buscar</label>
+                        <input type="text" class="form-control search-input" id="search-input" placeholder="Nome do arquivo...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status-filter" class="form-label">Status</label>
+                        <select class="form-select" id="status-filter">
+                            <option value="">Todos</option>
+                            <option value="PENDENTE">Pendente</option>
+                            <option value="PROCESSANDO">Processando</option>
+                            <option value="SUCESSO">Sucesso</option>
+                            <option value="ERRO">Erro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sort-by" class="form-label">Ordenar por</label>
+                        <select class="form-select" id="sort-by">
+                            <option value="-criado_em">Data de Criação</option>
+                            <option value="nome_arquivo">Nome do Arquivo</option>
+                            <option value="status_processamento">Status</option>
+                            <option value="tamanho_arquivo">Tamanho</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-primary" onclick="applyFilters()">
+                                <i class="bi bi-funnel"></i> Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Processamentos -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list"></i> Histórico de Processamentos
+                </h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="loadProcessamentos('sucesso')">
+                        <i class="bi bi-check-circle"></i> Sucessos
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="loadProcessamentos('erro')">
+                        <i class="bi bi-x-circle"></i> Erros
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="loadProcessamentos('pendente')">
+                        <i class="bi bi-hourglass-split"></i> Pendentes
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Arquivo</th>
+                                <th>Tamanho</th>
+                                <th>Status</th>
+                                <th>Data Processamento</th>
+                                <th>Tempo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="processamentos-table">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> Carregando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginação -->
+                <nav aria-label="Paginação de processamentos">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- Paginação será inserida aqui via JavaScript -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Upload -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload de PDF</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="file-upload-area" onclick="document.getElementById('modal-pdf-upload').click()">
+                    <input type="file" id="modal-pdf-upload" accept=".pdf" style="display: none;">
+                    <div class="file-display">
+                        <i class="bi bi-cloud-upload display-4 text-muted"></i>
+                        <div class="mt-3">
+                            <h5>Selecione um arquivo PDF</h5>
+                            <p class="text-muted">Máximo 16MB</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="modal-process-btn" disabled>
+                    <i class="bi bi-gear"></i> Processar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalhes do Processamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="details-content">
+                <!-- Conteúdo será inserido via JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="create-conta-btn" style="display: none;">
+                    <i class="bi bi-plus"></i> Criar Conta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let currentFilters = {};
+let currentProcessamentoId = null;
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    loadProcessamentos();
+    setupEventListeners();
+});
+
+// Configurar event listeners
+function setupEventListeners() {
+    // Upload de PDF principal
+    document.getElementById('pdf-upload').addEventListener('change', function(e) {
+        handleFileSelect(e.target.files[0]);
+    });
+
+    // Upload de PDF no modal
+    document.getElementById('modal-pdf-upload').addEventListener('change', function(e) {
+        handleFileSelect(e.target.files[0]);
+    });
+
+    // Botão processar principal
+    document.getElementById('process-pdf-btn').addEventListener('click', function() {
+        const file = document.getElementById('pdf-upload').files[0];
+        if (file) {
+            processPDF(file);
+        }
+    });
+
+    // Botão processar no modal
+    document.getElementById('modal-process-btn').addEventListener('click', function() {
+        const file = document.getElementById('modal-pdf-upload').files[0];
+        if (file) {
+            processPDF(file);
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+        }
+    });
+
+    // Botão limpar
+    document.getElementById('clear-file-btn').addEventListener('click', function() {
+        clearFile();
+    });
+
+    // Filtros
+    document.getElementById('search-input').addEventListener('input', utils.debounce(function() {
+        applyFilters();
+    }, 300));
+
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('sort-by').addEventListener('change', applyFilters);
+
+    // Drag and drop
+    const uploadAreas = document.querySelectorAll('.file-upload-area');
+    uploadAreas.forEach(area => {
+        area.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            area.classList.add('dragover');
+        });
+
+        area.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            area.classList.remove('dragover');
+        });
+
+        area.addEventListener('drop', function(e) {
+            e.preventDefault();
+            area.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                handleFileSelect(files[0]);
+            }
+        });
+    });
+}
+
+// Manipular seleção de arquivo
+function handleFileSelect(file) {
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+        showToast('Apenas arquivos PDF são permitidos', 'danger');
+        return;
+    }
+
+    if (file.size > 16 * 1024 * 1024) {
+        showToast('Arquivo muito grande. Máximo 16MB', 'danger');
+        return;
+    }
+
+    // Atualizar display
+    updateFileDisplay(file);
+    
+    // Habilitar botões
+    document.getElementById('process-pdf-btn').disabled = false;
+    document.getElementById('clear-file-btn').disabled = false;
+    document.getElementById('modal-process-btn').disabled = false;
+
+    showToast('Arquivo selecionado: ' + file.name, 'success');
+}
+
+// Atualizar display do arquivo
+function updateFileDisplay(file) {
+    const displays = document.querySelectorAll('.file-display');
+    displays.forEach(display => {
+        display.innerHTML = `
+            <i class="bi bi-file-earmark-pdf text-danger"></i>
+            <div class="mt-2">
+                <strong>${file.name}</strong><br>
+                <small class="text-muted">${formatFileSize(file.size)}</small>
+            </div>
+        `;
+    });
+}
+
+// Formatar tamanho do arquivo
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Limpar arquivo
+function clearFile() {
+    document.getElementById('pdf-upload').value = '';
+    document.getElementById('modal-pdf-upload').value = '';
+    
+    const displays = document.querySelectorAll('.file-display');
+    displays.forEach(display => {
+        display.innerHTML = `
+            <i class="bi bi-cloud-upload display-4 text-muted"></i>
+            <div class="mt-3">
+                <h5>Arraste um arquivo PDF aqui</h5>
+                <p class="text-muted">ou clique para selecionar</p>
+                <small class="text-muted">Máximo 16MB</small>
+            </div>
+        `;
+    });
+
+    document.getElementById('process-pdf-btn').disabled = true;
+    document.getElementById('clear-file-btn').disabled = true;
+    document.getElementById('modal-process-btn').disabled = true;
+}
+
+// Processar PDF
+async function processPDF(file) {
+    try {
+        showLoading();
+        
+        const formData = new FormData();
+        formData.append('arquivo_pdf', file);
+        
+        const response = await fetch('/api/pdf-processor/processar/', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('PDF processado com sucesso!', 'success');
+            clearFile();
+            loadProcessamentos();
+            
+            // Mostrar detalhes se houver dados extraídos
+            if (result.dados_extraidos) {
+                showProcessamentoDetails(result);
+            }
+        } else {
+            showToast('Erro ao processar PDF: ' + (result.error || 'Erro desconhecido'), 'danger');
+        }
+        
+        hideLoading();
+    } catch (error) {
+        console.error('Erro ao processar PDF:', error);
+        showToast('Erro ao processar PDF', 'danger');
+        hideLoading();
+    }
+}
+
+// Carregar processamentos
+async function loadProcessamentos(filter = 'todos') {
+    try {
+        showLoading();
+        
+        let url = '/api/pdf-processor/';
+        const params = new URLSearchParams();
+        
+        if (filter === 'sucesso') {
+            params.append('status_processamento', 'SUCESSO');
+        } else if (filter === 'erro') {
+            params.append('status_processamento', 'ERRO');
+        } else if (filter === 'pendente') {
+            params.append('status_processamento', 'PENDENTE');
+        }
+        
+        params.append('page', currentPage);
+        params.append('page_size', 20);
+        
+        // Aplicar filtros atuais
+        Object.keys(currentFilters).forEach(key => {
+            if (currentFilters[key]) {
+                params.append(key, currentFilters[key]);
+            }
+        });
+        
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderProcessamentosTable(data.results);
+            renderPagination(data);
+        } else {
+            showToast('Erro ao carregar processamentos', 'danger');
+        }
+        
+        hideLoading();
+    } catch (error) {
+        console.error('Erro ao carregar processamentos:', error);
+        showToast('Erro ao carregar processamentos', 'danger');
+        hideLoading();
+    }
+}
+
+// Renderizar tabela de processamentos
+function renderProcessamentosTable(processamentos) {
+    const tbody = document.getElementById('processamentos-table');
+    
+    if (processamentos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum processamento encontrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = processamentos.map(processamento => {
+        const statusClass = {
+            'PENDENTE': 'bg-warning',
+            'PROCESSANDO': 'bg-info',
+            'SUCESSO': 'bg-success',
+            'ERRO': 'bg-danger'
+        }[processamento.status_processamento] || 'bg-secondary';
+        
+        const tempoProcessamento = processamento.tempo_processamento_segundos 
+            ? processamento.tempo_processamento_segundos.toFixed(2) + 's'
+            : '-';
+        
+        return `
+            <tr>
+                <td>
+                    <i class="bi bi-file-earmark-pdf text-danger"></i>
+                    ${processamento.nome_arquivo}
+                </td>
+                <td>${formatFileSize(processamento.tamanho_arquivo)}</td>
+                <td>
+                    <span class="badge ${statusClass}">
+                        ${processamento.status_display}
+                    </span>
+                </td>
+                <td>${processamento.data_processamento ? utils.formatDateTime(processamento.data_processamento) : '-'}</td>
+                <td>${tempoProcessamento}</td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showProcessamentoDetails(${processamento.id})" title="Ver Detalhes">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        ${processamento.status_processamento === 'ERRO' ? `
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="reprocessarPDF(${processamento.id})" title="Reprocessar">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        ` : ''}
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProcessamento(${processamento.id})" title="Excluir">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Renderizar paginação
+function renderPagination(data) {
+    const pagination = document.getElementById('pagination');
+    
+    if (!data.previous && !data.next) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    
+    // Botão anterior
+    if (data.previous) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Anterior</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">Anterior</span></li>`;
+    }
+    
+    // Páginas
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(Math.ceil(data.count / 20), currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                 </li>`;
+    }
+    
+    // Botão próximo
+    if (data.next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Próximo</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">Próximo</span></li>`;
+    }
+    
+    pagination.innerHTML = html;
+}
+
+// Mudar página
+function changePage(page) {
+    currentPage = page;
+    loadProcessamentos();
+}
+
+// Aplicar filtros
+function applyFilters() {
+    currentFilters = {
+        search: document.getElementById('search-input').value,
+        status_processamento: document.getElementById('status-filter').value,
+        ordering: document.getElementById('sort-by').value
+    };
+    
+    currentPage = 1;
+    loadProcessamentos();
+}
+
+// Mostrar detalhes do processamento
+async function showProcessamentoDetails(processamentoId) {
+    try {
+        const response = await fetch(`/api/pdf-processor/${processamentoId}/`);
+        const processamento = await response.json();
+        
+        if (response.ok) {
+            currentProcessamentoId = processamentoId;
+            renderProcessamentoDetails(processamento);
+            bootstrap.Modal.getInstance(document.getElementById('detailsModal')).show();
+        } else {
+            showToast('Erro ao carregar detalhes', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar detalhes:', error);
+        showToast('Erro ao carregar detalhes', 'danger');
+    }
+}
+
+// Renderizar detalhes do processamento
+function renderProcessamentoDetails(processamento) {
+    const content = document.getElementById('details-content');
+    
+    let html = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Informações do Arquivo</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Nome:</strong></td><td>${processamento.nome_arquivo}</td></tr>
+                    <tr><td><strong>Tamanho:</strong></td><td>${formatFileSize(processamento.tamanho_arquivo)}</td></tr>
+                    <tr><td><strong>Status:</strong></td><td><span class="badge bg-${processamento.status_processamento === 'SUCESSO' ? 'success' : 'danger'}">${processamento.status_display}</span></td></tr>
+                    <tr><td><strong>Data:</strong></td><td>${utils.formatDateTime(processamento.data_processamento)}</td></tr>
+                    <tr><td><strong>Tempo:</strong></td><td>${processamento.tempo_processamento_segundos ? processamento.tempo_processamento_segundos.toFixed(2) + 's' : '-'}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Dados Extraídos</h6>
+    `;
+    
+    if (processamento.dados_extraidos) {
+        const dados = processamento.dados_extraidos;
+        
+        if (dados.fornecedor) {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header">Fornecedor</div>
+                    <div class="card-body">
+                        <p><strong>Razão Social:</strong> ${dados.fornecedor.razao_social || '-'}</p>
+                        <p><strong>CNPJ:</strong> ${dados.fornecedor.cnpj || '-'}</p>
+                        <p><strong>E-mail:</strong> ${dados.fornecedor.email || '-'}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (dados.nota_fiscal) {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header">Nota Fiscal</div>
+                    <div class="card-body">
+                        <p><strong>Número:</strong> ${dados.nota_fiscal.numero || '-'}</p>
+                        <p><strong>Data:</strong> ${dados.nota_fiscal.data_emissao || '-'}</p>
+                        <p><strong>Valor:</strong> ${dados.nota_fiscal.valor_total ? utils.formatCurrency(dados.nota_fiscal.valor_total) : '-'}</p>
+                        <p><strong>Descrição:</strong> ${dados.nota_fiscal.descricao || '-'}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (dados.parcelas && dados.parcelas.length > 0) {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header">Parcelas</div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Vencimento</th>
+                                    <th>Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${dados.parcelas.map(parcela => `
+                                    <tr>
+                                        <td>${parcela.numero}</td>
+                                        <td>${parcela.data_vencimento}</td>
+                                        <td>${utils.formatCurrency(parcela.valor)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        html += '<p class="text-muted">Nenhum dado extraído</p>';
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    if (processamento.erro_processamento) {
+        html += `
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        <h6>Erro no Processamento</h6>
+                        <p>${processamento.erro_processamento}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    content.innerHTML = html;
+    
+    // Mostrar botão de criar conta se processamento foi bem-sucedido
+    const createBtn = document.getElementById('create-conta-btn');
+    if (processamento.status_processamento === 'SUCESSO' && processamento.dados_extraidos) {
+        createBtn.style.display = 'inline-block';
+        createBtn.onclick = () => createContaFromPDF(processamento);
+    } else {
+        createBtn.style.display = 'none';
+    }
+}
+
+// Reprocessar PDF
+async function reprocessarPDF(processamentoId) {
+    try {
+        const response = await fetch(`/api/pdf-processor/${processamentoId}/reprocessar/`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showToast('PDF enviado para reprocessamento!', 'success');
+            loadProcessamentos();
+        } else {
+            showToast('Erro ao reprocessar PDF', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao reprocessar PDF:', error);
+        showToast('Erro ao reprocessar PDF', 'danger');
+    }
+}
+
+// Excluir processamento
+async function deleteProcessamento(processamentoId) {
+    if (!confirm('Tem certeza que deseja excluir este processamento?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/pdf-processor/${processamentoId}/`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showToast('Processamento excluído com sucesso!', 'success');
+            loadProcessamentos();
+        } else {
+            showToast('Erro ao excluir processamento', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir processamento:', error);
+        showToast('Erro ao excluir processamento', 'danger');
+    }
+}
+
+// Criar conta a partir do PDF
+function createContaFromPDF(processamento) {
+    // Aqui você pode implementar a lógica para criar uma conta a pagar
+    // baseada nos dados extraídos do PDF
+    showToast('Funcionalidade de criar conta será implementada em breve', 'info');
+}
+
+// Atualizar lista
+function refreshList() {
+    loadProcessamentos();
+    showToast('Lista atualizada!', 'success');
+}
+</script>
+{% endblock %}
+
+
+

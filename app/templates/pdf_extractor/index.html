@@ -1,0 +1,961 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extração de Dados de Nota Fiscal</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .page-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 3rem;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #e9ecef;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1.5rem;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #212529;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section-subtitle {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        
+        .file-input-container {
+            position: relative;
+            margin: 1.5rem 0;
+        }
+        
+        .file-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-input:hover {
+            border-color: #0d6efd;
+            background-color: #e7f1ff;
+        }
+        
+        .file-input input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-display {
+            background-color: #e7f1ff;
+            border: 1px solid #b3d7ff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: none;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .extract-btn {
+            background-color: #212529;
+            border: none;
+            border-radius: 8px;
+            padding: 1rem 2rem;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 auto;
+        }
+        
+        .extract-btn:hover {
+            background-color: #495057;
+            transform: translateY(-2px);
+        }
+        
+        .extract-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .nav-tabs {
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background-color: #0d6efd;
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .json-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .json-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #212529;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .copy-btn {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            color: #212529;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .copy-btn:hover {
+            background-color: #e9ecef;
+        }
+        
+        .json-display {
+            background-color: #212529;
+            border-radius: 8px;
+            padding: 1.5rem;
+            color: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .json-footer {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        
+        .alert {
+            border-radius: 8px;
+            border: none;
+        }
+        
+        .formatted-display {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .invoice-header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .invoice-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .invoice-subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin: 0.5rem 0 0 0;
+        }
+        
+        .invoice-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #0d6efd;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 120px;
+        }
+        
+        .info-value {
+            color: #212529;
+            text-align: right;
+            flex: 1;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .items-table th,
+        .items-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .items-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .items-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .totals-section {
+            background-color: #e7f1ff;
+            border-left: 4px solid #0d6efd;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            font-size: 1.1rem;
+        }
+        
+        .total-row.final {
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: #0d6efd;
+            border-top: 2px solid #0d6efd;
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+        
+        .currency {
+            font-weight: 600;
+            color: #28a745;
+        }
+        
+        .categoria-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .categoria-insumos { background-color: #d4edda; color: #155724; }
+        .categoria-manutencao { background-color: #fff3cd; color: #856404; }
+        .categoria-recursos { background-color: #cce5ff; color: #004085; }
+        .categoria-servicos { background-color: #e2e3e5; color: #383d41; }
+        .categoria-infraestrutura { background-color: #f8d7da; color: #721c24; }
+        .categoria-administrativas { background-color: #d1ecf1; color: #0c5460; }
+        .categoria-seguros { background-color: #e7e3ff; color: #4c2a85; }
+        .categoria-impostos { background-color: #ffeaa7; color: #6c5ce7; }
+        .categoria-investimentos { background-color: #fab1a0; color: #e17055; }
+        .categoria-outros { background-color: #ddd; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Título Principal -->
+        <h1 class="page-title">Extração de Dados de Nota Fiscal</h1>
+        <p class="page-subtitle">Carregue um PDF de nota fiscal e extraia os dados automaticamente usando Google Gemini AI</p>
+        
+        <!-- Botões de Navegação -->
+        <div class="text-center mb-4">
+            <a href="/pdf-processor/processados/" class="btn btn-success btn-lg me-3">
+                <i class="bi bi-list-check"></i> PDFs Processados
+            </a>
+        </div>
+        
+        <!-- Seção de Upload -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="section-title">
+                    <i class="bi bi-upload"></i>
+                    Upload do PDF
+                </h2>
+                <p class="section-subtitle">Selecione o arquivo PDF da nota fiscal</p>
+            </div>
+            <div class="card-body">
+                <div class="file-input-container">
+                    <div class="file-input" onclick="document.getElementById('pdfFile').click()">
+                        <div class="text-center">
+                            <i class="bi bi-cloud-upload" style="font-size: 2rem; color: #6c757d; margin-bottom: 1rem;"></i>
+                            <p class="mb-0">Clique para selecionar um arquivo PDF</p>
+                            <small class="text-muted">ou arraste e solte aqui</small>
+                        </div>
+                        <input type="file" id="pdfFile" accept=".pdf" style="display: none;">
+                    </div>
+                </div>
+                
+                <div class="file-display" id="fileDisplay">
+                    <div class="file-info">
+                        <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <div class="fw-bold" id="fileName">Nome do arquivo</div>
+                            <small class="text-muted" id="fileSize">Tamanho</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button class="extract-btn" id="extractBtn" disabled>
+                        <i class="bi bi-check-circle"></i>
+                        EXTRAIR DADOS
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Seção de Dados Extraídos -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="section-title">
+                    <i class="bi bi-file-text"></i>
+                    Dados Extraídos
+                </h2>
+                
+                <!-- Tabs -->
+                <ul class="nav nav-tabs" id="dataTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="formatted-tab" data-bs-toggle="tab" data-bs-target="#formatted" type="button" role="tab">
+                            Visualização Formatada
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="json-tab" data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab">
+                            JSON
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <!-- Loading -->
+                <div class="loading" id="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Processando...</span>
+                    </div>
+                    <p class="mt-3">Processando PDF...</p>
+                </div>
+                
+                <!-- Tab Content -->
+                <div class="tab-content" id="dataTabsContent">
+                    <!-- Visualização Formatada -->
+                    <div class="tab-pane fade" id="formatted" role="tabpanel">
+                        <div class="formatted-display" id="formattedDisplay">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                Faça upload de um PDF e clique em "EXTRAIR DADOS" para ver a visualização formatada.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- JSON -->
+                    <div class="tab-pane fade show active" id="json" role="tabpanel">
+                        <div class="json-header">
+                            <h3 class="json-title">
+                                <i class="bi bi-code-slash"></i>
+                                Dados em JSON
+                            </h3>
+                            <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">
+                                <i class="bi bi-clipboard"></i>
+                                Copiar JSON
+                            </button>
+                        </div>
+                        
+                        <div class="json-display" id="jsonDisplay">
+{
+  "numero": "000123456",
+  "serie": "001",
+  "dataEmissao": "2024-01-15",
+  "fornecedor": {
+    "nome": "EMPRESA FORNECEDORA LTDA",
+    "cnpj": "12.345.678/0001-90",
+    "endereco": "Rua das Empresas, 123 - São Paulo, SP"
+  },
+  "cliente": {
+    "nome": "CLIENTE EXEMPLO S.A.",
+    "cnpj": "98.765.432/0001-10",
+    "endereco": "Av. dos Clientes, 456 - Rio de Janeiro, RJ"
+  },
+  "itens": [
+    {
+      "descricao": "Produto A",
+      "quantidade": 10,
+      "valorUnitario": 25.50,
+      "valorTotal": 255.00
+    },
+    {
+      "descricao": "Produto B",
+      "quantidade": 5,
+      "valorUnitario": 15.75,
+      "valorTotal": 78.75
+    }
+  ],
+  "totais": {
+    "subtotal": 333.75,
+    "impostos": 66.75,
+    "total": 400.50
+  }
+}
+                        </div>
+                        
+                        <div class="json-footer">
+                            Este JSON contém todos os dados extraídos da nota fiscal e pode ser usado para integração com outros sistemas.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let selectedFile = null;
+        
+        // File input handling
+        document.getElementById('pdfFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                displayFile(file);
+                document.getElementById('extractBtn').disabled = false;
+            }
+        });
+        
+        // Drag and drop
+        const fileInput = document.querySelector('.file-input');
+        
+        fileInput.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileInput.style.borderColor = '#0d6efd';
+            fileInput.style.backgroundColor = '#e7f1ff';
+        });
+        
+        fileInput.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            fileInput.style.borderColor = '#dee2e6';
+            fileInput.style.backgroundColor = '#f8f9fa';
+        });
+        
+        fileInput.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileInput.style.borderColor = '#dee2e6';
+            fileInput.style.backgroundColor = '#f8f9fa';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                selectedFile = files[0];
+                displayFile(files[0]);
+                document.getElementById('extractBtn').disabled = false;
+            } else {
+                alert('Por favor, selecione apenas arquivos PDF.');
+            }
+        });
+        
+        function displayFile(file) {
+            const fileDisplay = document.getElementById('fileDisplay');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileDisplay.style.display = 'block';
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Extract button
+        document.getElementById('extractBtn').addEventListener('click', function() {
+            if (selectedFile) {
+                extractData();
+            }
+        });
+        
+        function extractData() {
+            const loading = document.getElementById('loading');
+            const extractBtn = document.getElementById('extractBtn');
+            const jsonDisplay = document.getElementById('jsonDisplay');
+            
+            // Show loading
+            loading.style.display = 'block';
+            extractBtn.disabled = true;
+            
+            // Clear previous JSON
+            jsonDisplay.textContent = 'Processando...';
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('pdf_file', selectedFile);
+            
+            console.log('Enviando arquivo:', selectedFile.name);
+            
+            // Make API call
+            fetch('/api/extract/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                console.log('Resposta recebida:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Dados recebidos:', data);
+                
+                loading.style.display = 'none';
+                extractBtn.disabled = false;
+                
+                if (data.success) {
+                    // Update JSON display with real data
+                    const jsonString = JSON.stringify(data.data, null, 2);
+                    jsonDisplay.textContent = jsonString;
+                    
+                    // Update formatted display
+                    updateFormattedDisplay(data.data);
+                    
+                    // Show success message
+                    const message = data.message || 'Dados extraídos com sucesso usando Google Gemini AI!';
+                    showAlert(message, 'success');
+                    
+                    // Show debug info if available
+                    if (data.debug && data.debug.raw_text_preview) {
+                        console.log('Texto extraído:', data.debug.raw_text_preview);
+                    }
+                    
+                    console.log('JSON atualizado com sucesso');
+                } else {
+                    jsonDisplay.textContent = 'Erro no processamento';
+                    updateFormattedDisplay(null);
+                    showAlert('Erro ao extrair dados: ' + data.error, 'danger');
+                    console.error('Erro:', data.error);
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                extractBtn.disabled = false;
+                jsonDisplay.textContent = 'Erro na comunicação';
+                updateFormattedDisplay(null);
+                showAlert('Erro na comunicação com o servidor', 'danger');
+                console.error('Error:', error);
+            });
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        function copyToClipboard() {
+            const jsonText = document.getElementById('jsonDisplay').textContent;
+            navigator.clipboard.writeText(jsonText).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check"></i> Copiado!';
+                copyBtn.style.backgroundColor = '#d4edda';
+                copyBtn.style.borderColor = '#c3e6cb';
+                copyBtn.style.color = '#155724';
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.style.backgroundColor = '#f8f9fa';
+                    copyBtn.style.borderColor = '#dee2e6';
+                    copyBtn.style.color = '#212529';
+                }, 2000);
+            });
+        }
+        
+        function updateFormattedDisplay(data) {
+            const formattedDisplay = document.getElementById('formattedDisplay');
+            
+            if (!data) {
+                formattedDisplay.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Erro ao processar dados. Tente novamente.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Gerar HTML formatado
+            const formattedHTML = generateFormattedHTML(data);
+            formattedDisplay.innerHTML = formattedHTML;
+        }
+        
+        function generateFormattedHTML(data) {
+            const formatCurrency = (value) => {
+                if (value === null || value === undefined) return 'N/A';
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(value);
+            };
+            
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                try {
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('pt-BR');
+                } catch {
+                    return dateStr;
+                }
+            };
+            
+            let html = `
+                <div class="invoice-header">
+                    <h1 class="invoice-title">NOTA FISCAL ELETRÔNICA</h1>
+                    <p class="invoice-subtitle">Dados extraídos automaticamente</p>
+                </div>
+                
+                <div class="invoice-section">
+                    <h3 class="section-title">
+                        <i class="bi bi-file-text"></i>
+                        Informações da Nota Fiscal
+                    </h3>
+                    <div class="info-row">
+                        <span class="info-label">Número:</span>
+                        <span class="info-value">${data.numero || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Série:</span>
+                        <span class="info-value">${data.serie || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Data de Emissão:</span>
+                        <span class="info-value">${formatDate(data.dataEmissao)}</span>
+                    </div>
+                </div>
+                
+                <div class="invoice-section">
+                    <h3 class="section-title">
+                        <i class="bi bi-building"></i>
+                        Fornecedor
+                    </h3>
+                    <div class="info-row">
+                        <span class="info-label">Nome:</span>
+                        <span class="info-value">${data.fornecedor?.nome || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">CNPJ:</span>
+                        <span class="info-value">${data.fornecedor?.cnpj || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Endereço:</span>
+                        <span class="info-value">${data.fornecedor?.endereco || 'N/A'}</span>
+                    </div>
+                </div>
+                
+                <div class="invoice-section">
+                    <h3 class="section-title">
+                        <i class="bi bi-person-badge"></i>
+                        Cliente
+                    </h3>
+                    <div class="info-row">
+                        <span class="info-label">Nome:</span>
+                        <span class="info-value">${data.cliente?.nome || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">CNPJ:</span>
+                        <span class="info-value">${data.cliente?.cnpj || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Endereço:</span>
+                        <span class="info-value">${data.cliente?.endereco || 'N/A'}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Adicionar itens se existirem
+            if (data.itens && data.itens.length > 0) {
+                html += `
+                    <div class="invoice-section">
+                        <h3 class="section-title">
+                            <i class="bi bi-list-ul"></i>
+                            Itens da Nota Fiscal
+                        </h3>
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th>Quantidade</th>
+                                    <th>Valor Unitário</th>
+                                    <th>Valor Total</th>
+                                    <th>Categoria</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.itens.forEach(item => {
+                    const categoria = item.categoria || 'N/A';
+                    const categoriaClass = getCategoriaClass(categoria);
+                    html += `
+                        <tr>
+                            <td>${item.descricao || 'N/A'}</td>
+                            <td>${item.quantidade || 'N/A'}</td>
+                            <td class="currency">${formatCurrency(item.valorUnitario)}</td>
+                            <td class="currency">${formatCurrency(item.valorTotal)}</td>
+                            <td><span class="categoria-badge ${categoriaClass}">${categoria}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            // Adicionar classificação geral
+            if (data.classificacao_geral) {
+                const categoriaClass = getCategoriaClass(data.classificacao_geral);
+                html += `
+                    <div class="invoice-section">
+                        <h3 class="section-title">
+                            <i class="bi bi-tags"></i>
+                            Classificação da Despesa
+                        </h3>
+                        <div class="info-row">
+                            <span class="info-label">Categoria Principal:</span>
+                            <span class="info-value">
+                                <span class="categoria-badge ${categoriaClass}">${data.classificacao_geral}</span>
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Adicionar totais
+            if (data.totais) {
+                html += `
+                    <div class="invoice-section totals-section">
+                        <h3 class="section-title">
+                            <i class="bi bi-calculator"></i>
+                            Totais
+                        </h3>
+                        <div class="total-row">
+                            <span>Subtotal:</span>
+                            <span class="currency">${formatCurrency(data.totais.subtotal)}</span>
+                        </div>
+                        <div class="total-row">
+                            <span>Impostos:</span>
+                            <span class="currency">${formatCurrency(data.totais.impostos)}</span>
+                        </div>
+                        <div class="total-row final">
+                            <span>Total:</span>
+                            <span class="currency">${formatCurrency(data.totais.total)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+        
+        function getCategoriaClass(categoria) {
+            if (!categoria) return 'categoria-outros';
+            
+            const categoriaLower = categoria.toLowerCase();
+            
+            if (categoriaLower.includes('insumos') || categoriaLower.includes('sementes') || 
+                categoriaLower.includes('fertilizantes') || categoriaLower.includes('defensivos')) {
+                return 'categoria-insumos';
+            }
+            if (categoriaLower.includes('manutenção') || categoriaLower.includes('manutencao') || 
+                categoriaLower.includes('combustível') || categoriaLower.includes('combustivel') ||
+                categoriaLower.includes('óleo') || categoriaLower.includes('oleo') ||
+                categoriaLower.includes('ferramenta') || categoriaLower.includes('chave') ||
+                categoriaLower.includes('alicate') || categoriaLower.includes('martelo') ||
+                categoriaLower.includes('kit') || categoriaLower.includes('multímetro') ||
+                categoriaLower.includes('multimetro') || categoriaLower.includes('peça') ||
+                categoriaLower.includes('peca') || categoriaLower.includes('componente')) {
+                return 'categoria-manutencao';
+            }
+            if (categoriaLower.includes('recursos') || categoriaLower.includes('humanos') || 
+                categoriaLower.includes('mão de obra') || categoriaLower.includes('mao de obra')) {
+                return 'categoria-recursos';
+            }
+            if (categoriaLower.includes('serviços') || categoriaLower.includes('servicos') || 
+                categoriaLower.includes('frete') || categoriaLower.includes('transporte')) {
+                return 'categoria-servicos';
+            }
+            if (categoriaLower.includes('infraestrutura') || categoriaLower.includes('utilidades') || 
+                categoriaLower.includes('construção') || categoriaLower.includes('construcao') ||
+                categoriaLower.includes('material hidráulico') || categoriaLower.includes('material hidraulico')) {
+                return 'categoria-infraestrutura';
+            }
+            if (categoriaLower.includes('administrativas') || categoriaLower.includes('honorários') || 
+                categoriaLower.includes('honorarios') || categoriaLower.includes('bancárias') ||
+                categoriaLower.includes('bancarias')) {
+                return 'categoria-administrativas';
+            }
+            if (categoriaLower.includes('seguros') || categoriaLower.includes('proteção') || 
+                categoriaLower.includes('protecao')) {
+                return 'categoria-seguros';
+            }
+            if (categoriaLower.includes('impostos') || categoriaLower.includes('taxas')) {
+                return 'categoria-impostos';
+            }
+            if (categoriaLower.includes('investimentos') || categoriaLower.includes('aquisição') || 
+                categoriaLower.includes('aquisicao') || categoriaLower.includes('máquinas') ||
+                categoriaLower.includes('maquinas')) {
+                return 'categoria-investimentos';
+            }
+            
+            return 'categoria-outros';
+        }
+        
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('.main-container');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

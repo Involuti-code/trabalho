@@ -1,0 +1,36 @@
+# Dependências para o Sistema Administrativo-Financeiro
+# Django Framework
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+django-environ==0.11.2
+django-filter==23.3
+
+# Flask para APIs específicas
+Flask==3.0.0
+Flask-CORS==4.0.0
+
+# Banco de dados PostgreSQL
+psycopg2-binary==2.9.9
+django-extensions==3.2.3
+
+# Processamento de PDF e IA
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+python-docx==1.1.0
+google-generativeai==0.3.2
+requests==2.31.0
+pypdf==4.0.1
+
+# Utilitários
+Pillow==10.1.0
+python-decouple==3.8
+celery==5.3.4
+redis==5.0.1
+
+# Desenvolvimento e testes
+pytest==7.4.3
+pytest-django==4.7.0
+factory-boy==3.3.0
+coverage==7.3.2
+

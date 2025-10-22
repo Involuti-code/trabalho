@@ -1,0 +1,559 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Sistema Administrativo-Financeiro{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_actions %}
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-calendar"></i> Período
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" data-period="today">Hoje</a></li>
+            <li><a class="dropdown-item" href="#" data-period="week">Esta Semana</a></li>
+            <li><a class="dropdown-item" href="#" data-period="month">Este Mês</a></li>
+            <li><a class="dropdown-item" href="#" data-period="year">Este Ano</a></li>
+        </ul>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+    </button>
+{% endblock %}
+
+{% block content %}
+<!-- Cards de Resumo -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="card-label">Total a Receber</div>
+                    <div class="card-value" id="total-receber">R$ 0,00</div>
+                </div>
+                <div class="card-icon">
+                    <i class="bi bi-arrow-up-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card warning">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="card-label">Total a Pagar</div>
+                    <div class="card-value" id="total-pagar">R$ 0,00</div>
+                </div>
+                <div class="card-icon">
+                    <i class="bi bi-arrow-down-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card info">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="card-label">Saldo Líquido</div>
+                    <div class="card-value" id="saldo-liquido">R$ 0,00</div>
+                </div>
+                <div class="card-icon">
+                    <i class="bi bi-calculator"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="card-label">Parcelas Vencidas</div>
+                    <div class="card-value" id="parcelas-vencidas">0</div>
+                </div>
+                <div class="card-icon">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> Fluxo de Caixa (Últimos 12 Meses)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="fluxoCaixaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart"></i> Despesas por Categoria
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="despesasChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabelas de Resumo -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-up-circle text-success"></i> Contas a Receber
+                </h5>
+                <a href="#" class="btn btn-sm btn-outline-success">
+                    Ver Todas
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Valor</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contas-receber-table">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> Carregando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-down-circle text-danger"></i> Contas a Pagar
+                </h5>
+                <a href="#" class="btn btn-sm btn-outline-danger">
+                    Ver Todas
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fornecedor</th>
+                                <th>Valor</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contas-pagar-table">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> Carregando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Parcelas Vencidas -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle text-warning"></i> Parcelas Vencidas
+                </h5>
+                <a href="#" class="btn btn-sm btn-outline-warning">
+                    Ver Todas
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Vencimento</th>
+                                <th>Dias em Atraso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parcelas-vencidas-table">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> Carregando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload de PDF -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-pdf text-danger"></i> Processar Nota Fiscal
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="file-upload-area" onclick="document.getElementById('pdf-upload').click()">
+                    <input type="file" id="pdf-upload" accept=".pdf" style="display: none;">
+                    <div class="file-display">
+                        <i class="bi bi-cloud-upload display-4 text-muted"></i>
+                        <div class="mt-3">
+                            <h5>Arraste um arquivo PDF aqui</h5>
+                            <p class="text-muted">ou clique para selecionar</p>
+                            <small class="text-muted">Máximo 16MB</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary" id="process-pdf-btn" disabled>
+                        <i class="bi bi-gear"></i> Processar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dados do dashboard
+let dashboardData = {
+    totalReceber: 0,
+    totalPagar: 0,
+    parcelasVencidas: 0,
+    fluxoCaixa: [],
+    despesasPorCategoria: []
+};
+
+// Inicializar dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    initializeCharts();
+    setupEventListeners();
+});
+
+// Carregar dados do dashboard
+async function loadDashboardData() {
+    try {
+        showLoading();
+        
+        // Carregar estatísticas
+        const [receberStats, pagarStats, parcelasStats] = await Promise.all([
+            fetch('/api/contas-receber/estatisticas/').then(r => r.json()),
+            fetch('/api/contas-pagar/estatisticas/').then(r => r.json()),
+            fetch('/api/parcelas/estatisticas/').then(r => r.json())
+        ]);
+        
+        // Atualizar cards
+        document.getElementById('total-receber').textContent = utils.formatCurrency(receberStats.valor_pendente);
+        document.getElementById('total-pagar').textContent = utils.formatCurrency(pagarStats.valor_pendente);
+        document.getElementById('saldo-liquido').textContent = utils.formatCurrency(receberStats.valor_pendente - pagarStats.valor_pendente);
+        document.getElementById('parcelas-vencidas').textContent = parcelasStats.vencidas;
+        
+        // Carregar tabelas
+        await loadContasReceber();
+        await loadContasPagar();
+        await loadParcelasVencidas();
+        
+        hideLoading();
+    } catch (error) {
+        console.error('Erro ao carregar dados do dashboard:', error);
+        showToast('Erro ao carregar dados do dashboard', 'danger');
+        hideLoading();
+    }
+}
+
+// Carregar contas a receber
+async function loadContasReceber() {
+    try {
+        const response = await fetch('/api/contas-receber/?limit=5');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('contas-receber-table');
+        if (data.results && data.results.length > 0) {
+            tbody.innerHTML = data.results.map(conta => `
+                <tr>
+                    <td>${conta.cliente_nome}</td>
+                    <td>${utils.formatCurrency(conta.valor_total)}</td>
+                    <td>${utils.formatDate(conta.data_emissao)}</td>
+                    <td><span class="badge badge-status-${conta.status.toLowerCase()}">${conta.status_display}</span></td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma conta encontrada</td></tr>';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar contas a receber:', error);
+    }
+}
+
+// Carregar contas a pagar
+async function loadContasPagar() {
+    try {
+        const response = await fetch('/api/contas-pagar/?limit=5');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('contas-pagar-table');
+        if (data.results && data.results.length > 0) {
+            tbody.innerHTML = data.results.map(conta => `
+                <tr>
+                    <td>${conta.fornecedor_nome}</td>
+                    <td>${utils.formatCurrency(conta.valor_total)}</td>
+                    <td>${utils.formatDate(conta.data_emissao)}</td>
+                    <td><span class="badge badge-status-${conta.status.toLowerCase()}">${conta.status_display}</span></td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma conta encontrada</td></tr>';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar contas a pagar:', error);
+    }
+}
+
+// Carregar parcelas vencidas
+async function loadParcelasVencidas() {
+    try {
+        const response = await fetch('/api/parcelas/vencidas/?limit=10');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('parcelas-vencidas-table');
+        if (data.results && data.results.length > 0) {
+            tbody.innerHTML = data.results.map(parcela => {
+                const diasAtraso = Math.ceil((new Date() - new Date(parcela.data_vencimento)) / (1000 * 60 * 60 * 24));
+                return `
+                    <tr>
+                        <td>${parcela.numero_parcela}</td>
+                        <td>Parcela ${parcela.numero_parcela}</td>
+                        <td>${utils.formatCurrency(parcela.valor)}</td>
+                        <td>${utils.formatDate(parcela.data_vencimento)}</td>
+                        <td><span class="badge bg-danger">${diasAtraso} dias</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-success" onclick="marcarParcelaComoPaga(${parcela.id})">
+                                <i class="bi bi-check"></i> Pagar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma parcela vencida</td></tr>';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar parcelas vencidas:', error);
+    }
+}
+
+// Inicializar gráficos
+function initializeCharts() {
+    // Gráfico de fluxo de caixa
+    const fluxoCaixaCtx = document.getElementById('fluxoCaixaChart').getContext('2d');
+    new Chart(fluxoCaixaCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+            datasets: [{
+                label: 'Receitas',
+                data: [12000, 15000, 18000, 16000, 20000, 22000, 19000, 21000, 23000, 25000, 24000, 26000],
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Despesas',
+                data: [8000, 10000, 12000, 11000, 14000, 15000, 13000, 14500, 16000, 17000, 16500, 18000],
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de despesas por categoria
+    const despesasCtx = document.getElementById('despesasChart').getContext('2d');
+    new Chart(despesasCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Insumos Agrícolas', 'Manutenção', 'Recursos Humanos', 'Serviços', 'Outros'],
+            datasets: [{
+                data: [35, 25, 20, 15, 5],
+                backgroundColor: [
+                    '#198754',
+                    '#dc3545',
+                    '#0d6efd',
+                    '#ffc107',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+}
+
+// Configurar event listeners
+function setupEventListeners() {
+    // Upload de PDF
+    document.getElementById('pdf-upload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            document.getElementById('process-pdf-btn').disabled = false;
+            showToast('Arquivo selecionado: ' + file.name, 'success');
+        }
+    });
+
+    // Processar PDF
+    document.getElementById('process-pdf-btn').addEventListener('click', function() {
+        const file = document.getElementById('pdf-upload').files[0];
+        if (file) {
+            processPDF(file);
+        }
+    });
+
+    // Filtros de período
+    document.querySelectorAll('[data-period]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const period = this.dataset.period;
+            filterByPeriod(period);
+        });
+    });
+}
+
+// Processar PDF
+async function processPDF(file) {
+    try {
+        showLoading();
+        
+        const formData = new FormData();
+        formData.append('arquivo_pdf', file);
+        
+        const response = await fetch('/api/pdf-processor/processar/', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('PDF processado com sucesso!', 'success');
+            // Aqui você pode redirecionar para a página de detalhes ou mostrar os dados extraídos
+            console.log('Dados extraídos:', result.dados_extraidos);
+        } else {
+            showToast('Erro ao processar PDF: ' + result.error, 'danger');
+        }
+        
+        hideLoading();
+    } catch (error) {
+        console.error('Erro ao processar PDF:', error);
+        showToast('Erro ao processar PDF', 'danger');
+        hideLoading();
+    }
+}
+
+// Marcar parcela como paga
+async function marcarParcelaComoPaga(parcelaId) {
+    try {
+        const response = await fetch(`/api/parcelas/${parcelaId}/marcar-como-paga/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        });
+        
+        if (response.ok) {
+            showToast('Parcela marcada como paga!', 'success');
+            loadDashboardData(); // Recarregar dados
+        } else {
+            showToast('Erro ao marcar parcela como paga', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao marcar parcela como paga:', error);
+        showToast('Erro ao marcar parcela como paga', 'danger');
+    }
+}
+
+// Filtrar por período
+function filterByPeriod(period) {
+    // Implementar filtro por período
+    console.log('Filtrar por período:', period);
+    showToast('Filtro aplicado para: ' + period, 'info');
+}
+
+// Atualizar dashboard
+function refreshDashboard() {
+    loadDashboardData();
+    showToast('Dashboard atualizado!', 'success');
+}
+</script>
+{% endblock %}
+

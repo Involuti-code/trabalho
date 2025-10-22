@@ -1,0 +1,17 @@
+# Configurações do Sistema Administrativo-Financeiro
+
+# Google Gemini API Key
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Configurações do Django
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+
+# Configurações do Banco de Dados
+DATABASE_URL=sqlite:///db.sqlite3
+
+# Configurações do Celery
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+

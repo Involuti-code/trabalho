@@ -1,0 +1,561 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Fornecedores - Sistema Administrativo-Financeiro{% endblock %}
+
+{% block page_title %}Fornecedores{% endblock %}
+
+{% block page_actions %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#fornecedorModal">
+        <i class="bi bi-plus"></i> Novo Fornecedor
+    </button>
+    <button type="button" class="btn btn-outline-secondary" onclick="exportToCSV()">
+        <i class="bi bi-download"></i> Exportar CSV
+    </button>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search-input" class="form-label">Buscar</label>
+                        <input type="text" class="form-control search-input" id="search-input" placeholder="Razão social, fantasia, CNPJ...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status-filter" class="form-label">Status</label>
+                        <select class="form-select" id="status-filter">
+                            <option value="">Todos</option>
+                            <option value="true">Ativos</option>
+                            <option value="false">Inativos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sort-by" class="form-label">Ordenar por</label>
+                        <select class="form-select" id="sort-by">
+                            <option value="razao_social">Razão Social</option>
+                            <option value="fantasia">Fantasia</option>
+                            <option value="cnpj">CNPJ</option>
+                            <option value="criado_em">Data de Criação</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-primary" onclick="applyFilters()">
+                                <i class="bi bi-funnel"></i> Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Fornecedores -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building"></i> Lista de Fornecedores
+                </h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadFornecedores('ativos')">
+                        <i class="bi bi-check-circle"></i> Ativos
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadFornecedores('inativos')">
+                        <i class="bi bi-x-circle"></i> Inativos
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="loadFornecedores('todos')">
+                        <i class="bi bi-list"></i> Todos
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover exportable-table searchable-table">
+                        <thead>
+                            <tr>
+                                <th>Razão Social</th>
+                                <th>Fantasia</th>
+                                <th>CNPJ</th>
+                                <th>E-mail</th>
+                                <th>Telefone</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fornecedores-table">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> Carregando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginação -->
+                <nav aria-label="Paginação de fornecedores">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- Paginação será inserida aqui via JavaScript -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Fornecedor -->
+<div class="modal fade" id="fornecedorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fornecedorModalTitle">Novo Fornecedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="fornecedorForm" class="auto-save">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="razao_social" class="form-label">Razão Social *</label>
+                            <input type="text" class="form-control" id="razao_social" name="razao_social" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="fantasia" class="form-label">Nome Fantasia</label>
+                            <input type="text" class="form-control" id="fantasia" name="fantasia">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cnpj" class="form-label">CNPJ *</label>
+                            <input type="text" class="form-control cpf-input" id="cnpj" name="cnpj" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">E-mail</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telefone" class="form-label">Telefone</label>
+                            <input type="text" class="form-control phone-input" id="telefone" name="telefone">
+                        </div>
+                        <div class="col-12">
+                            <label for="endereco" class="form-label">Endereço</label>
+                            <textarea class="form-control" id="endereco" name="endereco" rows="3"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Ação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Tem certeza que deseja realizar esta ação?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let currentFilters = {};
+let editingFornecedorId = null;
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    loadFornecedores();
+    setupEventListeners();
+});
+
+// Configurar event listeners
+function setupEventListeners() {
+    // Formulário de fornecedor
+    document.getElementById('fornecedorForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveFornecedor();
+    });
+
+    // Filtros
+    document.getElementById('search-input').addEventListener('input', utils.debounce(function() {
+        applyFilters();
+    }, 300));
+
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('sort-by').addEventListener('change', applyFilters);
+
+    // Modal de confirmação
+    document.getElementById('confirmBtn').addEventListener('click', function() {
+        const action = this.dataset.action;
+        const id = this.dataset.id;
+        
+        if (action === 'delete') {
+            deleteFornecedor(id);
+        } else if (action === 'inactivate') {
+            inactivateFornecedor(id);
+        } else if (action === 'activate') {
+            activateFornecedor(id);
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+    });
+}
+
+// Carregar fornecedores
+async function loadFornecedores(filter = 'ativos') {
+    try {
+        showLoading();
+        
+        let url = '/api/fornecedores/';
+        const params = new URLSearchParams();
+        
+        if (filter === 'ativos') {
+            params.append('ativo', 'true');
+        } else if (filter === 'inativos') {
+            params.append('ativo', 'false');
+        }
+        
+        params.append('page', currentPage);
+        params.append('page_size', 20);
+        
+        // Aplicar filtros atuais
+        Object.keys(currentFilters).forEach(key => {
+            if (currentFilters[key]) {
+                params.append(key, currentFilters[key]);
+            }
+        });
+        
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderFornecedoresTable(data.results);
+            renderPagination(data);
+        } else {
+            showToast('Erro ao carregar fornecedores', 'danger');
+        }
+        
+        hideLoading();
+    } catch (error) {
+        console.error('Erro ao carregar fornecedores:', error);
+        showToast('Erro ao carregar fornecedores', 'danger');
+        hideLoading();
+    }
+}
+
+// Renderizar tabela de fornecedores
+function renderFornecedoresTable(fornecedores) {
+    const tbody = document.getElementById('fornecedores-table');
+    
+    if (fornecedores.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum fornecedor encontrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = fornecedores.map(fornecedor => `
+        <tr>
+            <td>${fornecedor.razao_social}</td>
+            <td>${fornecedor.fantasia || '-'}</td>
+            <td>${fornecedor.cnpj}</td>
+            <td>${fornecedor.email || '-'}</td>
+            <td>${fornecedor.telefone || '-'}</td>
+            <td>
+                <span class="badge ${fornecedor.ativo ? 'bg-success' : 'bg-secondary'}">
+                    ${fornecedor.ativo ? 'Ativo' : 'Inativo'}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editFornecedor(${fornecedor.id})" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-${fornecedor.ativo ? 'warning' : 'success'}" 
+                            onclick="toggleFornecedorStatus(${fornecedor.id}, ${fornecedor.ativo})" 
+                            title="${fornecedor.ativo ? 'Inativar' : 'Ativar'}">
+                        <i class="bi bi-${fornecedor.ativo ? 'pause' : 'play'}"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${fornecedor.id})" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Renderizar paginação
+function renderPagination(data) {
+    const pagination = document.getElementById('pagination');
+    
+    if (!data.previous && !data.next) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    
+    // Botão anterior
+    if (data.previous) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Anterior</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">Anterior</span></li>`;
+    }
+    
+    // Páginas
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(Math.ceil(data.count / 20), currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                 </li>`;
+    }
+    
+    // Botão próximo
+    if (data.next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Próximo</a></li>`;
+    } else {
+        html += `<li class="page-item disabled"><span class="page-link">Próximo</span></li>`;
+    }
+    
+    pagination.innerHTML = html;
+}
+
+// Mudar página
+function changePage(page) {
+    currentPage = page;
+    loadFornecedores();
+}
+
+// Aplicar filtros
+function applyFilters() {
+    currentFilters = {
+        search: document.getElementById('search-input').value,
+        ativo: document.getElementById('status-filter').value,
+        ordering: document.getElementById('sort-by').value
+    };
+    
+    currentPage = 1;
+    loadFornecedores();
+}
+
+// Salvar fornecedor
+async function saveFornecedor() {
+    try {
+        const formData = new FormData(document.getElementById('fornecedorForm'));
+        const data = Object.fromEntries(formData.entries());
+        
+        let url = '/api/fornecedores/';
+        let method = 'POST';
+        
+        if (editingFornecedorId) {
+            url += editingFornecedorId + '/';
+            method = 'PUT';
+        }
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            showToast(editingFornecedorId ? 'Fornecedor atualizado com sucesso!' : 'Fornecedor criado com sucesso!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('fornecedorModal')).hide();
+            loadFornecedores();
+            resetForm();
+        } else {
+            const error = await response.json();
+            showToast('Erro ao salvar fornecedor: ' + (error.detail || 'Erro desconhecido'), 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar fornecedor:', error);
+        showToast('Erro ao salvar fornecedor', 'danger');
+    }
+}
+
+// Editar fornecedor
+async function editFornecedor(id) {
+    try {
+        const response = await fetch(`/api/fornecedores/${id}/`);
+        const fornecedor = await response.json();
+        
+        if (response.ok) {
+            editingFornecedorId = id;
+            document.getElementById('fornecedorModalTitle').textContent = 'Editar Fornecedor';
+            
+            // Preencher formulário
+            document.getElementById('razao_social').value = fornecedor.razao_social;
+            document.getElementById('fantasia').value = fornecedor.fantasia || '';
+            document.getElementById('cnpj').value = fornecedor.cnpj;
+            document.getElementById('email').value = fornecedor.email || '';
+            document.getElementById('telefone').value = fornecedor.telefone || '';
+            document.getElementById('endereco').value = fornecedor.endereco || '';
+            document.getElementById('observacoes').value = fornecedor.observacoes || '';
+            
+            bootstrap.Modal.getInstance(document.getElementById('fornecedorModal')).show();
+        } else {
+            showToast('Erro ao carregar fornecedor', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao editar fornecedor:', error);
+        showToast('Erro ao editar fornecedor', 'danger');
+    }
+}
+
+// Alternar status do fornecedor
+function toggleFornecedorStatus(id, isActive) {
+    const action = isActive ? 'inactivate' : 'activate';
+    const message = isActive ? 'Tem certeza que deseja inativar este fornecedor?' : 'Tem certeza que deseja ativar este fornecedor?';
+    
+    showConfirmModal(
+        isActive ? 'Inativar Fornecedor' : 'Ativar Fornecedor',
+        message,
+        function() {
+            if (isActive) {
+                inactivateFornecedor(id);
+            } else {
+                activateFornecedor(id);
+            }
+        }
+    );
+}
+
+// Inativar fornecedor
+async function inactivateFornecedor(id) {
+    try {
+        const response = await fetch(`/api/fornecedores/${id}/inativar/`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showToast('Fornecedor inativado com sucesso!', 'success');
+            loadFornecedores();
+        } else {
+            showToast('Erro ao inativar fornecedor', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao inativar fornecedor:', error);
+        showToast('Erro ao inativar fornecedor', 'danger');
+    }
+}
+
+// Ativar fornecedor
+async function activateFornecedor(id) {
+    try {
+        const response = await fetch(`/api/fornecedores/${id}/reativar/`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showToast('Fornecedor ativado com sucesso!', 'success');
+            loadFornecedores();
+        } else {
+            showToast('Erro ao ativar fornecedor', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao ativar fornecedor:', error);
+        showToast('Erro ao ativar fornecedor', 'danger');
+    }
+}
+
+// Confirmar exclusão
+function confirmDelete(id) {
+    showConfirmModal(
+        'Excluir Fornecedor',
+        'Tem certeza que deseja excluir este fornecedor? Esta ação não pode ser desfeita.',
+        function() {
+            deleteFornecedor(id);
+        }
+    );
+}
+
+// Excluir fornecedor
+async function deleteFornecedor(id) {
+    try {
+        const response = await fetch(`/api/fornecedores/${id}/`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showToast('Fornecedor excluído com sucesso!', 'success');
+            loadFornecedores();
+        } else {
+            showToast('Erro ao excluir fornecedor', 'danger');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir fornecedor:', error);
+        showToast('Erro ao excluir fornecedor', 'danger');
+    }
+}
+
+// Resetar formulário
+function resetForm() {
+    editingFornecedorId = null;
+    document.getElementById('fornecedorForm').reset();
+    document.getElementById('fornecedorModalTitle').textContent = 'Novo Fornecedor';
+}
+
+// Exportar para CSV
+function exportToCSV() {
+    const table = document.querySelector('.exportable-table');
+    if (!table) return;
+
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    rows.forEach(function(row) {
+        const cells = row.querySelectorAll('td, th');
+        const rowData = Array.from(cells).map(cell => {
+            return '"' + cell.textContent.replace(/"/g, '""') + '"';
+        });
+        csv.push(rowData.join(','));
+    });
+
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fornecedores.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}
+
+
+

@@ -1,0 +1,426 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .detail-header {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .detail-title {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #333;
+        margin: 0 0 10px 0;
+    }
+    
+    .detail-subtitle {
+        color: #666;
+        font-size: 1em;
+        margin: 0;
+    }
+    
+    .detail-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .detail-section {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #007bff;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 4px;
+    }
+    
+    .info-value {
+        color: #333;
+        font-size: 0.95em;
+        word-break: break-word;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+    
+    .status-existe {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-nao-existe {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .json-display {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .actions-section {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 30px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 0.9em;
+        transition: background-color 0.3s ease;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #218838;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+    
+    .alert {
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+    
+    .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+    
+    .full-width {
+        grid-column: 1 / -1;
+    }
+    
+    @media (max-width: 768px) {
+        .detail-content {
+            grid-template-columns: 1fr;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="detail-container">
+        <!-- Header -->
+        <div class="detail-header">
+            <h1 class="detail-title">{{ processamento.nome_arquivo }}</h1>
+            <p class="detail-subtitle">ID: {{ processamento.id }} | Processado em: {{ processamento.data_processamento|date:"d/m/Y H:i" }}</p>
+        </div>
+        
+        <!-- Mensagens -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- Status de Criação Automática -->
+        {% if processamento.status_processamento == 'DUPLICADO' %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Processamento Duplicado:</strong> Este PDF já foi processado anteriormente. 
+                ID do processamento original: {{ processamento.erro_processamento|slice:"-1" }}
+            </div>
+        {% elif processamento.status_processamento == 'SUCESSO' %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                <strong>Processamento Concluído:</strong> Os registros foram criados automaticamente no banco de dados.
+            </div>
+        {% endif %}
+        
+        <!-- Conteúdo Principal -->
+        <div class="detail-content">
+            <!-- Fornecedor -->
+            <div class="detail-section">
+                <h3 class="section-title">FORNECEDOR</h3>
+                {% if dados_extraidos.fornecedor %}
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Nome:</div>
+                            <div class="info-value">{{ dados_extraidos.fornecedor.nome|default:"Não informado" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">CNPJ:</div>
+                            <div class="info-value">{{ dados_extraidos.fornecedor.cnpj|default:"Não informado" }}</div>
+                        </div>
+                        <div class="info-item full-width">
+                            <div class="info-label">Endereço:</div>
+                            <div class="info-value">{{ dados_extraidos.fornecedor.endereco|default:"Não informado" }}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <strong>Status no Banco:</strong>
+                        <span class="status-badge status-{% if fornecedor_info.existe %}existe{% else %}nao-existe{% endif %}">
+                            {{ fornecedor_info.mensagem }}
+                        </span>
+                    </div>
+                {% else %}
+                    <p>Nenhum dado de fornecedor encontrado.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Faturado -->
+            <div class="detail-section">
+                <h3 class="section-title">FATURADO</h3>
+                {% if dados_extraidos.cliente %}
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Nome:</div>
+                            <div class="info-value">{{ dados_extraidos.cliente.nome|default:"Não informado" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">CPF:</div>
+                            <div class="info-value">{{ dados_extraidos.cliente.cpf|default:"Não informado" }}</div>
+                        </div>
+                        <div class="info-item full-width">
+                            <div class="info-label">Endereço:</div>
+                            <div class="info-value">{{ dados_extraidos.cliente.endereco|default:"Não informado" }}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <strong>Status no Banco:</strong>
+                        <span class="status-badge status-{% if faturado_info.existe %}existe{% else %}nao-existe{% endif %}">
+                            {{ faturado_info.mensagem }}
+                        </span>
+                    </div>
+                {% else %}
+                    <p>Nenhum dado de faturado encontrado.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Despesa -->
+            <div class="detail-section">
+                <h3 class="section-title">DESPESA</h3>
+                {% if dados_extraidos.classificacao_geral %}
+                    <div class="info-item">
+                        <div class="info-label">Classificação:</div>
+                        <div class="info-value">{{ dados_extraidos.classificacao_geral }}</div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <strong>Status no Banco:</strong>
+                        <span class="status-badge status-{% if despesa_info.existe %}existe{% else %}nao-existe{% endif %}">
+                            {{ despesa_info.mensagem }}
+                        </span>
+                    </div>
+                {% else %}
+                    <p>Nenhuma classificação de despesa encontrada.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Dados da Nota Fiscal -->
+            <div class="detail-section">
+                <h3 class="section-title">NOTA FISCAL</h3>
+                {% if dados_extraidos.numero or dados_extraidos.dataEmissao or dados_extraidos.totais %}
+                    <div class="info-grid">
+                        {% if dados_extraidos.numero %}
+                        <div class="info-item">
+                            <div class="info-label">Número:</div>
+                            <div class="info-value">{{ dados_extraidos.numero }}</div>
+                        </div>
+                        {% endif %}
+                        {% if dados_extraidos.dataEmissao %}
+                        <div class="info-item">
+                            <div class="info-label">Data de Emissão:</div>
+                            <div class="info-value">{{ dados_extraidos.dataEmissao }}</div>
+                        </div>
+                        {% endif %}
+                        {% if dados_extraidos.totais.total %}
+                        <div class="info-item">
+                            <div class="info-label">Valor Total:</div>
+                            <div class="info-value">R$ {{ dados_extraidos.totais.total|floatformat:2 }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p>Nenhum dado da nota fiscal encontrado.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Dados JSON Completos -->
+        <div class="detail-section">
+            <h3 class="section-title">Dados Extraídos (JSON)</h3>
+            <div class="json-display">{{ dados_extraidos|pprint }}</div>
+        </div>
+        
+        <!-- Ações -->
+        <div class="actions-section">
+            <h3 class="section-title">Ações</h3>
+            <div>
+                <a href="{% url 'pdf_processor:pdf_processed_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar à Lista
+                </a>
+                <button id="deletePDF" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Deletar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Deletar PDF
+    document.getElementById('deletePDF').addEventListener('click', function() {
+        if (!confirm('Tem certeza que deseja deletar este PDF? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+        
+        fetch(`/pdf-processor/api/{{ processamento.id }}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert('PDF deletado com sucesso!');
+                window.location.href = "{% url 'pdf_processor:pdf_processed_list' %}";
+            } else {
+                alert('Erro ao deletar PDF: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao deletar PDF:', error);
+            alert('Erro ao deletar PDF');
+        });
+    });
+    
+    // Obter cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}
