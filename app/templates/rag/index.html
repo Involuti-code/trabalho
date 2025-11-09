@@ -1,0 +1,444 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}RAG - Busca Inteligente{% endblock %}
+
+{% block page_title %}
+    <span style="color: #212529 !important;"><i class="bi bi-search"></i> RAG - Busca Inteligente</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Garantir que o título da página tenha cor escura */
+    .h2, h1.h2, h1.h2 * {
+        color: #212529 !important;
+    }
+    
+    /* Garantir que todos os elementos dentro do título tenham cor escura */
+    h1.h2 span, h1.h2 i {
+        color: #212529 !important;
+    }
+    
+    .rag-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .pergunta-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+        color: #212529 !important; /* Garantir texto escuro no card */
+    }
+    
+    .pergunta-card h3 {
+        color: #212529 !important; /* Garantir título escuro */
+    }
+    
+    .pergunta-card h3 i {
+        color: #212529 !important; /* Garantir ícone escuro */
+    }
+    
+    .resposta-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        min-height: 200px;
+        color: #212529; /* Garantir texto escuro */
+    }
+    
+    .resposta-card h4 {
+        color: #212529 !important; /* Forçar cor escura no título */
+    }
+    
+    .resposta-card #resposta-texto {
+        color: #212529 !important; /* Forçar cor escura no texto da resposta */
+        line-height: 1.6;
+    }
+    
+    .resposta-loading {
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    .tipo-rag-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .tipo-rag-btn {
+        flex: 1;
+        padding: 15px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: #212529 !important; /* Garantir texto escuro quando não ativo */
+    }
+    
+    .tipo-rag-btn:hover {
+        border-color: #0d6efd;
+        background: #f0f7ff;
+        color: #212529 !important; /* Garantir texto escuro no hover */
+    }
+    
+    .tipo-rag-btn.active {
+        border-color: #0d6efd;
+        background: #0d6efd;
+        color: white !important; /* Texto branco quando ativo (botão azul) */
+    }
+    
+    /* Garantir que textos dentro dos botões tenham cor correta */
+    .tipo-rag-btn strong {
+        color: inherit !important;
+    }
+    
+    .tipo-rag-btn small {
+        color: inherit !important;
+    }
+    
+    .tipo-rag-btn i {
+        color: inherit !important;
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .historico-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-top: 30px;
+        max-height: 400px;
+        overflow-y: auto;
+        color: #212529 !important; /* Garantir texto escuro no card */
+    }
+    
+    .historico-card h5 {
+        color: #212529 !important; /* Título do histórico em cor escura */
+    }
+    
+    .historico-item {
+        padding: 15px;
+        border-bottom: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: background 0.2s;
+        color: #212529 !important; /* Garantir texto escuro */
+    }
+    
+    .historico-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .historico-item:last-child {
+        border-bottom: none;
+    }
+    
+    .historico-item strong {
+        color: #212529 !important; /* Forçar cor escura no texto forte */
+        font-weight: 600;
+    }
+    
+    .historico-item * {
+        color: inherit; /* Herdar cor do pai */
+    }
+    
+    .historico-item .text-muted {
+        color: #6c757d !important; /* Manter cinza para timestamps */
+    }
+    
+    .badge-tipo {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
+    
+    .contexto-info {
+        background: #e7f3ff;
+        border-left: 4px solid #0d6efd;
+        padding: 15px;
+        margin-top: 15px;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: #212529 !important; /* Garantir texto escuro */
+    }
+    
+    .contexto-info #contexto-texto {
+        color: #495057 !important; /* Texto do contexto em cinza escuro */
+    }
+    
+    .tempo-resposta {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rag-container">
+    <!-- Card de Pergunta -->
+    <div class="pergunta-card">
+        <h3 class="mb-4">
+            <i class="bi bi-chat-dots"></i> Faça sua pergunta sobre o banco de dados
+        </h3>
+        
+        <!-- Seletor de Tipo de RAG -->
+        <div class="tipo-rag-selector">
+            <div class="tipo-rag-btn active" data-tipo="SIMPLES">
+                <i class="bi bi-search"></i>
+                <div><strong>RAG Simples</strong></div>
+                <small>Busca por palavras-chave</small>
+            </div>
+            <div class="tipo-rag-btn" data-tipo="EMBEDDINGS">
+                <i class="bi bi-brain"></i>
+                <div><strong>RAG Embeddings</strong></div>
+                <small>Busca semântica avançada</small>
+            </div>
+        </div>
+        
+        <!-- Formulário de Pergunta -->
+        <form id="form-pergunta">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="pergunta" class="form-label">Sua pergunta:</label>
+                <textarea 
+                    class="form-control" 
+                    id="pergunta" 
+                    rows="3" 
+                    placeholder="Ex: Quais são os fornecedores cadastrados? Quais contas estão pendentes? Quanto devemos receber este mês?"
+                    required></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-lg w-100" id="btn-enviar">
+                <i class="bi bi-send"></i> Enviar Pergunta
+            </button>
+        </form>
+    </div>
+    
+    <!-- Card de Resposta -->
+    <div class="resposta-card" id="resposta-card" style="display: none;">
+        <div id="resposta-loading" class="resposta-loading" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Processando...</span>
+            </div>
+            <p class="mt-3">Processando sua pergunta...</p>
+        </div>
+        
+        <div id="resposta-conteudo">
+            <h4 class="mb-3" style="color: #212529;">
+                <i class="bi bi-chat-square-text"></i> Resposta:
+            </h4>
+            <div id="resposta-texto" class="mb-3" style="color: #212529;"></div>
+            <div id="contexto-info" class="contexto-info" style="display: none;">
+                <strong><i class="bi bi-info-circle"></i> Contexto utilizado:</strong>
+                <div id="contexto-texto" class="mt-2"></div>
+            </div>
+            <div id="tempo-resposta" class="tempo-resposta"></div>
+        </div>
+    </div>
+    
+    <!-- Card de Histórico -->
+    <div class="historico-card">
+        <h5 class="mb-3">
+            <i class="bi bi-clock-history"></i> Histórico de Consultas
+        </h5>
+        <div id="historico-lista">
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-hourglass-split"></i> Carregando histórico...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let tipoRAGSelecionado = 'SIMPLES';
+    
+    // Seletor de tipo de RAG
+    document.querySelectorAll('.tipo-rag-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tipo-rag-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            tipoRAGSelecionado = this.dataset.tipo;
+        });
+    });
+    
+    // Formulário de pergunta
+    document.getElementById('form-pergunta').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const pergunta = document.getElementById('pergunta').value.trim();
+        if (!pergunta) {
+            alert('Por favor, digite uma pergunta.');
+            return;
+        }
+        
+        // Mostrar loading
+        const respostaCard = document.getElementById('resposta-card');
+        const respostaLoading = document.getElementById('resposta-loading');
+        const respostaConteudo = document.getElementById('resposta-conteudo');
+        const btnEnviar = document.getElementById('btn-enviar');
+        
+        respostaCard.style.display = 'block';
+        respostaLoading.style.display = 'block';
+        respostaConteudo.style.display = 'none';
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
+        
+        try {
+            // Obter CSRF token
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+            
+            const response = await fetch('{% url "rag:consultar" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    pergunta: pergunta,
+                    tipo_rag: tipoRAGSelecionado
+                })
+            });
+            
+            const data = await response.json();
+            
+            // Esconder loading
+            respostaLoading.style.display = 'none';
+            respostaConteudo.style.display = 'block';
+            
+            if (data.success) {
+                // Mostrar resposta
+                const respostaTexto = document.getElementById('resposta-texto');
+                respostaTexto.innerHTML = formatarResposta(data.resposta);
+                respostaTexto.style.color = '#212529'; // Garantir cor escura
+                
+                // Mostrar contexto se disponível
+                if (data.contexto) {
+                    const contextoInfo = document.getElementById('contexto-info');
+                    const contextoTxt = document.getElementById('contexto-texto');
+                    contextoInfo.style.display = 'block';
+                    contextoTxt.textContent = data.contexto.substring(0, 500) + (data.contexto.length > 500 ? '...' : '');
+                    contextoTxt.style.color = '#495057'; // Garantir cor escura no contexto
+                }
+                
+                // Mostrar tempo de resposta
+                if (data.tempo_resposta) {
+                    const tempoResposta = document.getElementById('tempo-resposta');
+                    tempoResposta.innerHTML = 
+                        `<i class="bi bi-stopwatch"></i> Tempo de resposta: ${data.tempo_resposta.toFixed(2)} segundos`;
+                    tempoResposta.style.color = '#6c757d'; // Garantir cor cinza
+                }
+            } else {
+                const respostaTexto = document.getElementById('resposta-texto');
+                respostaTexto.innerHTML = 
+                    `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Erro: ${data.error || 'Erro desconhecido'}</div>`;
+                respostaTexto.style.color = '#212529'; // Garantir cor escura mesmo em erro
+            }
+            
+            // Recarregar histórico
+            carregarHistorico();
+            
+        } catch (error) {
+            respostaLoading.style.display = 'none';
+            respostaConteudo.style.display = 'block';
+            const respostaTexto = document.getElementById('resposta-texto');
+            respostaTexto.innerHTML = 
+                `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Erro ao processar: ${error.message}</div>`;
+            respostaTexto.style.color = '#212529'; // Garantir cor escura
+        } finally {
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = '<i class="bi bi-send"></i> Enviar Pergunta';
+        }
+    });
+    
+    // Formatar resposta (markdown básico)
+    function formatarResposta(texto) {
+        if (!texto) return '';
+        
+        // Converter quebras de linha
+        texto = texto.replace(/\n/g, '<br>');
+        
+        // Converter negrito
+        texto = texto.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #212529;">$1</strong>');
+        
+        // Converter listas
+        texto = texto.replace(/^\d+\.\s(.+)$/gm, '<li style="color: #212529;">$1</li>');
+        texto = texto.replace(/(<li.*?<\/li>)/s, '<ol style="color: #212529;">$1</ol>');
+        
+        // Garantir que todo o texto tenha cor escura
+        return `<div style="color: #212529;">${texto}</div>`;
+    }
+    
+    // Carregar histórico
+    async function carregarHistorico() {
+        try {
+            const response = await fetch('{% url "rag:historico" %}?limite=5');
+            const data = await response.json();
+            
+            const historicoLista = document.getElementById('historico-lista');
+            
+            if (data.success && data.consultas.length > 0) {
+                historicoLista.innerHTML = data.consultas.map(consulta => `
+                    <div class="historico-item" onclick="usarPerguntaAnterior('${consulta.pergunta.replace(/'/g, "\\'")}')" style="color: #212529;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1" style="color: #212529;">
+                                <strong style="color: #212529 !important;">${consulta.pergunta.substring(0, 100)}${consulta.pergunta.length > 100 ? '...' : ''}</strong>
+                                <div class="mt-1">
+                                    <span class="badge badge-tipo ${consulta.tipo_rag === 'EMBEDDINGS' ? 'bg-info' : 'bg-secondary'}">
+                                        ${consulta.tipo_rag === 'EMBEDDINGS' ? 'Embeddings' : 'Simples'}
+                                    </span>
+                                    <small class="text-muted ms-2" style="color: #6c757d !important;">${consulta.criado_em}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                historicoLista.innerHTML = '<div class="text-center text-muted py-4">Nenhuma consulta realizada ainda.</div>';
+            }
+        } catch (error) {
+            console.error('Erro ao carregar histórico:', error);
+        }
+    }
+    
+    // Usar pergunta anterior
+    function usarPerguntaAnterior(pergunta) {
+        document.getElementById('pergunta').value = pergunta;
+        document.getElementById('pergunta').focus();
+    }
+    
+    // Função auxiliar para obter cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Carregar histórico ao carregar a página
+    document.addEventListener('DOMContentLoaded', function() {
+        carregarHistorico();
+    });
+</script>
+{% endblock %}
+

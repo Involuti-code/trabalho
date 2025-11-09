@@ -31,6 +31,7 @@ urlpatterns = [
     # URLs Web do Sistema Administrativo-Financeiro
     path('fornecedores/', include('apps.fornecedores.urls_web')),
     path('pdf-processor/', include('apps.pdf_processor.urls_web')),
+    path('rag/', include('apps.rag.urls')),
 ]
 
 # Servir arquivos de mídia durante o desenvolvimento

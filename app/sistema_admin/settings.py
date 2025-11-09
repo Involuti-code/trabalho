@@ -43,11 +43,18 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    'apps.core',
+    'apps.clientes',
     'apps.fornecedores',
     'apps.faturados',
     'apps.tipos_despesa',
+    'apps.tipos_receita',
     'apps.pdf_processor',
     'apps.pdf_extractor',  # App principal - tela inicial
+    'apps.parcelas',
+    'apps.contas_pagar',
+    'apps.contas_receber',
+    'apps.rag',  # App RAG - Busca Inteligente
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
