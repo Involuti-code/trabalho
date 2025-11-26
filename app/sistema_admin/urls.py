@@ -1,18 +1,5 @@
 """
 URL configuration for sistema_admin project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path, include
@@ -28,8 +15,20 @@ urlpatterns = [
     # App principal - PDF Extractor (tela inicial)
     path('', include('apps.pdf_extractor.urls')),
     
-    # URLs Web do Sistema Administrativo-Financeiro
+    # URLs Web - Pessoas
     path('fornecedores/', include('apps.fornecedores.urls_web')),
+    path('clientes/', include('apps.clientes.urls_web')),
+    path('faturados/', include('apps.faturados.urls_web')),
+    
+    # URLs Web - Contas
+    path('contas-pagar/', include('apps.contas_pagar.urls_web')),
+    path('contas-receber/', include('apps.contas_receber.urls_web')),
+    
+    # URLs Web - Classificações
+    path('tipos-despesa/', include('apps.tipos_despesa.urls_web')),
+    path('tipos-receita/', include('apps.tipos_receita.urls_web')),
+    
+    # URLs Web - Ferramentas
     path('pdf-processor/', include('apps.pdf_processor.urls_web')),
     path('rag/', include('apps.rag.urls')),
 ]

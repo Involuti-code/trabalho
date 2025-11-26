@@ -1,0 +1,261 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Clientes - Sistema Administrativo-Financeiro{% endblock %}
+{% block page_title %}Clientes{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#itemModal">
+    <i class="bi bi-plus"></i> Novo Cliente
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Busca -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <i class="bi bi-search"></i> Buscar Clientes
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-8">
+                <input type="text" class="form-control" id="search-input" placeholder="Buscar por nome, CPF, email ou telefone...">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-secondary w-100" onclick="loadAll()">
+                    <i class="bi bi-list"></i> Todos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela -->
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <i class="bi bi-people"></i> Lista de Clientes
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th onclick="sortBy('nome')" style="cursor:pointer">Nome <i class="bi bi-arrow-down-up"></i></th>
+                        <th onclick="sortBy('cpf')" style="cursor:pointer">CPF <i class="bi bi-arrow-down-up"></i></th>
+                        <th onclick="sortBy('email')" style="cursor:pointer">Email <i class="bi bi-arrow-down-up"></i></th>
+                        <th>Telefone</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="items-table">
+                    <tr><td colspan="6" class="text-center text-muted">Use a busca ou clique em "Todos" para carregar os dados</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <nav><ul class="pagination justify-content-center" id="pagination"></ul></nav>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalTitle">Novo Cliente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="itemForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nome *</label>
+                            <input type="text" class="form-control" id="nome" name="nome" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">CPF *</label>
+                            <input type="text" class="form-control" id="cpf" name="cpf" required placeholder="000.000.000-00">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Telefone</label>
+                            <input type="text" class="form-control" id="telefone" name="telefone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Data de Nascimento</label>
+                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Endereço</label>
+                            <textarea class="form-control" id="endereco" name="endereco" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check"></i> Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API_URL = '/clientes/api/';
+let currentPage = 1;
+let editingId = null;
+let currentOrdering = 'nome';
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('itemForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveItem();
+    });
+    document.getElementById('itemModal').addEventListener('hidden.bs.modal', resetForm);
+});
+
+function loadAll() {
+    loadItems('true');
+}
+
+async function loadItems(ativo = 'true') {
+    try {
+        const search = document.getElementById('search-input').value;
+        let url = `${API_URL}?ativo=${ativo}&page=${currentPage}&page_size=20&ordering=${currentOrdering}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderTable(data.results);
+            renderPagination(data);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
+
+function renderTable(items) {
+    const tbody = document.getElementById('items-table');
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum registro encontrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = items.map(item => `
+        <tr>
+            <td>${item.nome}</td>
+            <td>${item.cpf}</td>
+            <td>${item.email || '-'}</td>
+            <td>${item.telefone || '-'}</td>
+            <td><span class="badge ${item.ativo ? 'bg-success' : 'bg-secondary'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="editItem(${item.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteItem(${item.id})" title="Excluir"><i class="bi bi-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderPagination(data) {
+    const pagination = document.getElementById('pagination');
+    if (!data.previous && !data.next) { pagination.innerHTML = ''; return; }
+    
+    let html = '';
+    if (data.previous) html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage-1})">Anterior</a></li>`;
+    html += `<li class="page-item active"><span class="page-link">${currentPage}</span></li>`;
+    if (data.next) html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage+1})">Próximo</a></li>`;
+    pagination.innerHTML = html;
+}
+
+function changePage(page) { currentPage = page; loadItems(); }
+function applyFilters() { currentPage = 1; loadItems(); }
+function sortBy(field) { currentOrdering = currentOrdering === field ? `-${field}` : field; loadItems(); }
+
+async function saveItem() {
+    const formData = new FormData(document.getElementById('itemForm'));
+    const data = Object.fromEntries(formData.entries());
+    
+    let url = API_URL;
+    let method = 'POST';
+    if (editingId) { url += editingId + '/'; method = 'PUT'; }
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+            loadItems();
+            showToast('Salvo com sucesso!', 'success');
+        } else {
+            const error = await response.json();
+            showToast('Erro: ' + JSON.stringify(error), 'danger');
+        }
+    } catch (error) {
+        showToast('Erro ao salvar', 'danger');
+    }
+}
+
+async function editItem(id) {
+    try {
+        const response = await fetch(`${API_URL}${id}/`);
+        const item = await response.json();
+        
+        if (response.ok) {
+            editingId = id;
+            document.getElementById('modalTitle').textContent = 'Editar Cliente';
+            document.getElementById('nome').value = item.nome || '';
+            document.getElementById('cpf').value = item.cpf || '';
+            document.getElementById('email').value = item.email || '';
+            document.getElementById('telefone').value = item.telefone || '';
+            document.getElementById('data_nascimento').value = item.data_nascimento || '';
+            document.getElementById('endereco').value = item.endereco || '';
+            document.getElementById('observacoes').value = item.observacoes || '';
+            new bootstrap.Modal(document.getElementById('itemModal')).show();
+        }
+    } catch (error) {
+        showToast('Erro ao carregar', 'danger');
+    }
+}
+
+async function deleteItem(id) {
+    if (!confirm('Tem certeza que deseja excluir este registro?')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}${id}/`, { method: 'DELETE' });
+        if (response.ok) {
+            loadItems();
+            showToast('Excluído com sucesso!', 'success');
+        }
+    } catch (error) {
+        showToast('Erro ao excluir', 'danger');
+    }
+}
+
+function resetForm() {
+    editingId = null;
+    document.getElementById('itemForm').reset();
+    document.getElementById('modalTitle').textContent = 'Novo Cliente';
+}
+</script>
+{% endblock %}
+
