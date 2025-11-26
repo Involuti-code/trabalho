@@ -1,0 +1,21 @@
+# Dependências LITE para Deploy - Sistema Administrativo-Financeiro
+# Use este arquivo para hospedagem com limite de espaço (PythonAnywhere gratuito)
+
+# Django Framework (ESSENCIAL)
+Django==4.2.7
+djangorestframework==3.14.0
+django-extensions==3.2.3
+
+# Processamento de PDF (leve)
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+pypdf==4.0.1
+
+# Utilitários (ESSENCIAL)
+python-decouple==3.8
+requests==2.31.0
+Pillow==10.1.0
+
+# Google Gemini (para IA)
+google-generativeai==0.3.2
+
