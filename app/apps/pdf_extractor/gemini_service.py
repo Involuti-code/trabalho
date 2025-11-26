@@ -16,7 +16,9 @@ class GeminiAIService:
     """
     
     def __init__(self):
-        self.api_key = "AIzaSyDzTWZnNzxlz5prkmLThQV25h7l_Run8fw"
+        import os
+        from decouple import config
+        self.api_key = config('GEMINI_API_KEY', default=os.environ.get('GEMINI_API_KEY', ''))
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
     
     def extract_text_from_pdf_simple(self, pdf_file) -> str:
